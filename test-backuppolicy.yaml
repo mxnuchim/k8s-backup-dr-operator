@@ -1,0 +1,11 @@
+apiVersion: backup.manuchim.dev/v1alpha1
+kind: BackupPolicy
+metadata:
+  name: first-backup
+  namespace: default
+spec:
+  schedule: "0 2 * * *"
+  target:
+    pvcName: test-data
+  retention:
+    keepLast: 7

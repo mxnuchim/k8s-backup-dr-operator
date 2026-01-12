@@ -3,6 +3,7 @@
 # It should be run by config/default
 resources:
 - bases/backup.manuchim.dev_backuppolicies.yaml
+- bases/backup.manuchim.dev_backups.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:
