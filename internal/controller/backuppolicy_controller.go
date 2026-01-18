@@ -24,9 +24,11 @@ import (
 
 	backupv1alpha1 "github.com/mxnuchim/k8s-backup-operator/api/v1alpha1"
 	"github.com/robfig/cron/v3"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +38,8 @@ import (
 // BackupPolicyReconciler reconciles a BackupPolicy object
 type BackupPolicyReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=backup.manuchim.dev,resources=backuppolicies,verbs=get;list;watch;create;update;patch;delete
@@ -80,6 +83,14 @@ func (r *BackupPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				LastTransitionTime: metav1.Now(),
 			},
 		}
+		r.Recorder.Eventf(
+			&backupPolicy,
+			corev1.EventTypeWarning,
+			"InvalidSchedule",
+			"Invalid cron schedule %q: %v",
+			backupPolicy.Spec.Schedule,
+			err,
+		)
 		r.Status().Update(ctx, &backupPolicy)
 		return ctrl.Result{}, nil
 	}
@@ -101,6 +112,14 @@ func (r *BackupPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Not time yet, requeue for the scheduled time
 		requeueAfter := nextBackupTime.Sub(now)
 		log.Info("Next backup scheduled", "nextBackupTime", nextBackupTime, "requeueAfter", requeueAfter)
+
+		r.Recorder.Eventf(
+			&backupPolicy,
+			corev1.EventTypeNormal,
+			"BackupScheduled",
+			"Next backup scheduled for %s",
+			nextBackupTime.Format(time.RFC3339),
+		)
 
 		// Update status with next scheduled time
 		backupPolicy.Status.NextScheduledBackup = &metav1.Time{Time: nextBackupTime}
@@ -151,6 +170,14 @@ func (r *BackupPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	log.Info("Created scheduled Backup", "backupName", backup.Name)
+
+	r.Recorder.Eventf(
+		&backupPolicy,
+		corev1.EventTypeNormal,
+		"BackupCreated",
+		"Created backup %s",
+		backup.Name,
+	)
 
 	// Clean up old backups based on retention policy
 	if err := r.cleanupOldBackups(ctx, &backupPolicy); err != nil {
@@ -215,6 +242,9 @@ func (r *BackupPolicyReconciler) cleanupOldBackups(ctx context.Context, backupPo
 		return ownedBackups[i].CreationTimestamp.After(ownedBackups[j].CreationTimestamp.Time)
 	})
 
+	// If we have more backups than allowed, delete the extras
+	deletedCount := 0
+
 	// Delete backups beyond keepLast
 	if len(ownedBackups) > keepLast {
 		backupsToDelete := ownedBackups[keepLast:]
@@ -228,7 +258,21 @@ func (r *BackupPolicyReconciler) cleanupOldBackups(ctx context.Context, backupPo
 				// Continue trying to delete others
 				continue
 			}
+			deletedCount++
+
 		}
+	}
+
+	// Emit ONE event if we deleted anything
+	if deletedCount > 0 {
+		r.Recorder.Eventf(
+			backupPolicy,
+			corev1.EventTypeNormal,
+			"CleanupTriggered",
+			"Deleted %d old backups (keepLast=%d)",
+			deletedCount,
+			keepLast,
+		)
 	}
 
 	return nil
@@ -236,6 +280,7 @@ func (r *BackupPolicyReconciler) cleanupOldBackups(ctx context.Context, backupPo
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BackupPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Recorder = mgr.GetEventRecorderFor("backuppolicy-controller")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupv1alpha1.BackupPolicy{}).
 		Owns(&backupv1alpha1.Backup{}). // Watch backups owned by this policy

@@ -98,6 +98,15 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				LastTransitionTime: metav1.Now(),
 			},
 		}
+		r.Recorder.Eventf(
+			&restore,
+			corev1.EventTypeWarning,
+			"BackupNotFound",
+			"Backup %s not found in namespace %s",
+			restore.Spec.BackupName,
+			targetNamespace,
+		)
+
 		r.Status().Update(ctx, &restore)
 		return ctrl.Result{}, err
 	}
@@ -115,6 +124,15 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				LastTransitionTime: metav1.Now(),
 			},
 		}
+		r.Recorder.Eventf(
+			&restore,
+			corev1.EventTypeWarning,
+			"BackupNotReady",
+			"Backup %s is in phase %s",
+			backup.Name,
+			backup.Status.Phase,
+		)
+
 		r.Status().Update(ctx, &restore)
 		return ctrl.Result{}, nil
 	}
@@ -133,6 +151,12 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				LastTransitionTime: metav1.Now(),
 			},
 		}
+		r.Recorder.Event(
+			&restore,
+			corev1.EventTypeNormal,
+			"RestoreStarted",
+			"Restore job creation started",
+		)
 		if err := r.Status().Update(ctx, &restore); err != nil {
 			log.Error(err, "unable to update Restore status to Running")
 			return ctrl.Result{}, err
@@ -163,6 +187,13 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			if err := r.Status().Update(ctx, &restore); err != nil {
 				return ctrl.Result{}, err
 			}
+			r.Recorder.Eventf(
+				&restore,
+				corev1.EventTypeNormal,
+				"RestoreCompleted",
+				"Restore completed successfully from backup %s",
+				backup.Name,
+			)
 			return ctrl.Result{}, nil
 		} else if existingJob.Status.Failed > 0 {
 			log.Info("Restore Job failed")
@@ -178,6 +209,12 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 					LastTransitionTime: metav1.Now(),
 				},
 			}
+			r.Recorder.Event(
+				&restore,
+				corev1.EventTypeWarning,
+				"RestoreFailed",
+				"Restore job failed, check job logs",
+			)
 			if err := r.Status().Update(ctx, &restore); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -206,6 +243,13 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	log.Info("Created Restore Job", "jobName", job.Name)
+	r.Recorder.Eventf(
+		&restore,
+		corev1.EventTypeNormal,
+		"RestoreJobCreated",
+		"Restore job %s created",
+		job.Name,
+	)
 	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
