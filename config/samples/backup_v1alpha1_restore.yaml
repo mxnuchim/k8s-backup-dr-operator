@@ -1,0 +1,9 @@
+apiVersion: backup.manuchim.dev/v1alpha1
+kind: Restore
+metadata:
+  labels:
+    app.kubernetes.io/name: k8s-backup-dr-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: restore-sample
+spec:
+  # TODO(user): Add fields here

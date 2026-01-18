@@ -4,6 +4,7 @@
 resources:
 - bases/backup.manuchim.dev_backuppolicies.yaml
 - bases/backup.manuchim.dev_backups.yaml
+- bases/backup.manuchim.dev_restores.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patches:

@@ -167,7 +167,7 @@ func (r *BackupReconciler) createBackupJob(backup *backupv1alpha1.Backup) *batch
 								"sh",
 								"-c",
 								"echo 'Starting backup of PVC: " + backup.Spec.Target.PVCName + "' && " +
-									"tar -czf /backup-output/backup.tar.gz -C /data . && " +
+									"tar -czf /backup-output/" + backup.Name + ".tar.gz -C /data . && " +
 									"echo 'Backup completed successfully' && " +
 									"ls -lh /backup-output/",
 							},
@@ -197,7 +197,9 @@ func (r *BackupReconciler) createBackupJob(backup *backupv1alpha1.Backup) *batch
 						{
 							Name: "backup-output",
 							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "backup-storage", // Shared storage
+								},
 							},
 						},
 					},

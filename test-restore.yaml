@@ -1,0 +1,8 @@
+apiVersion: backup.manuchim.dev/v1alpha1
+kind: Restore
+metadata:
+  name: my-first-restore
+  namespace: default
+spec:
+  backupName: first-backup-20260118-074532
+  targetPVC: restored-data

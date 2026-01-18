@@ -2,4 +2,5 @@
 resources:
 - backup_v1alpha1_backuppolicy.yaml
 - backup_v1alpha1_backup.yaml
+- backup_v1alpha1_restore.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples
