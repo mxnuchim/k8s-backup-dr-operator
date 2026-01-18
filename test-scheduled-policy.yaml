@@ -4,7 +4,7 @@ metadata:
   name: test-scheduled
   namespace: default
 spec:
-  schedule: "* * * * *" # Every minute
+  schedule: "0 2 * * *" # Every day at 2:00 AM
   target:
     pvcName: test-data
   retention:
