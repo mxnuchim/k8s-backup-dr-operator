@@ -39,7 +39,7 @@ import (
 // RestoreReconciler reconciles a Restore object
 type RestoreReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
 }
 

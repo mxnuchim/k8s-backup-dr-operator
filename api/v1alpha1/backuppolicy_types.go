@@ -62,6 +62,14 @@ type BackupPolicyStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// LastBackupTime is when the last backup was created
+	// +optional
+	LastBackupTime *metav1.Time `json:"lastBackupTime,omitempty"`
+
+	// NextScheduledBackup is when the next backup will be created
+	// +optional
+	NextScheduledBackup *metav1.Time `json:"nextScheduledBackup,omitempty"`
+
 	// For Kubernetes API conventions, see:
 	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
 

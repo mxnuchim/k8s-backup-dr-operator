@@ -1,0 +1,11 @@
+apiVersion: backup.manuchim.dev/v1alpha1
+kind: BackupPolicy
+metadata:
+  name: test-scheduled
+  namespace: default
+spec:
+  schedule: "* * * * *" # Every minute
+  target:
+    pvcName: test-data
+  retention:
+    keepLast: 3
