@@ -33,6 +33,7 @@ type BackupSpec struct {
 	// Target defines what to backup (copied from BackupPolicy)
 	// +kubebuilder:validation:Required
 	Target BackupTarget `json:"target"`
+
 }
 
 // BackupStatus defines the observed state of Backup

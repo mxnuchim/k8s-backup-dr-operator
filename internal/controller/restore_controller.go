@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -39,6 +40,7 @@ import (
 type RestoreReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=backup.manuchim.dev,resources=restores,verbs=get;list;watch;create;update;patch;delete
@@ -315,6 +317,7 @@ func (r *RestoreReconciler) createRestoreJob(restore *backupv1alpha1.Restore, ba
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *RestoreReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Recorder = mgr.GetEventRecorderFor("restore-operator")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupv1alpha1.Restore{}).
 		Owns(&batchv1.Job{}).

@@ -27,6 +27,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +38,7 @@ import (
 type BackupReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=backup.manuchim.dev,resources=backups,verbs=get;list;watch;create;update;patch;delete
@@ -211,6 +213,7 @@ func (r *BackupReconciler) createBackupJob(backup *backupv1alpha1.Backup) *batch
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	r.Recorder = mgr.GetEventRecorderFor("backup-operator")
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&backupv1alpha1.Backup{}).
 		Owns(&batchv1.Job{}).
