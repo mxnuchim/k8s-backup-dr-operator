@@ -114,9 +114,15 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			return ctrl.Result{}, nil
 		}
 		// Job still running, requeue to check later
-		log.Info("Backup Job still running")
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
-	}
+		// 🔔 EVENT (Job still running)
+		r.Recorder.Event(
+			&backup,
+			corev1.EventTypeNormal,
+			"JobRunning",
+			"Backup Job is still running",
+		)		
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
 
 	if !apierrors.IsNotFound(err) {
 		log.Error(err, "unable to fetch Job")
@@ -131,12 +137,30 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			log.Error(err, "unable to create Backup Job")
 			backup.Status.Phase = backupv1alpha1.BackupPhaseFailed
 			r.Status().Update(ctx, &backup)
+
+			r.Recorder.Event(
+				&backup,
+				corev1.EventTypeWarning,
+				"JobCreateFailed",
+				"Failed to create backup Job",
+			)
+
 			return ctrl.Result{}, err
+
+		
 		}
 		log.Info("Job already exists (race condition), continuing")
 	}
 
+	
+
 	log.Info("Created Backup Job", "jobName", job.Name)
+	r.Recorder.Event(
+		&backup,
+		corev1.EventTypeNormal,
+		"JobCreated",
+		"Backup Job created successfully",
+	)
 	return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
