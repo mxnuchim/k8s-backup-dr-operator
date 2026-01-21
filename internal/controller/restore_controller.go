@@ -106,7 +106,7 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			restore.Spec.BackupName,
 			targetNamespace,
 		)
-
+		
 		r.Status().Update(ctx, &restore)
 		return ctrl.Result{}, err
 	}
@@ -132,7 +132,7 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			backup.Name,
 			backup.Status.Phase,
 		)
-
+		
 		r.Status().Update(ctx, &restore)
 		return ctrl.Result{}, nil
 	}
@@ -193,11 +193,17 @@ func (r *RestoreReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				"RestoreCompleted",
 				"Restore completed successfully from backup %s",
 				backup.Name,
-			)
+			)			
 			return ctrl.Result{}, nil
 		} else if existingJob.Status.Failed > 0 {
 			log.Info("Restore Job failed")
 			restore.Status.Phase = backupv1alpha1.RestorePhaseFailed
+			r.Recorder.Event(
+				&restore,
+				corev1.EventTypeWarning,
+				"RestoreFailed",
+				"Restore job failed, check job logs",
+			)
 			now := metav1.Now()
 			restore.Status.CompletionTime = &now
 			restore.Status.Conditions = []metav1.Condition{
